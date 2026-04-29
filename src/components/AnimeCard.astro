@@ -1,23 +1,33 @@
 ---
 export interface Props {
+  id: number;
   title: string;
   imageUrl: string;
   score: number;
   synopsis: string;
 }
 
-const { title, imageUrl, score, synopsis } = Astro.props;
+const { id, title, imageUrl, score, synopsis } = Astro.props;
 ---
-<div class="anime-card">
-  <img src={imageUrl} alt={title} class="anime-img">
-  <div class="anime-info">
+<a href={`/anime/${id}`} class="anime-card-link">
+  <div class="anime-card">
+    <img src={imageUrl} alt={title} class="anime-img">
+    <div class="anime-info">
     <h3>{title}</h3>
     <p class="score">⭐ {score}</p>
     <p class="synopsis">{synopsis ? synopsis.substring(0, 100) + '...' : 'Sin sinopsis disponible'}</p>
   </div>
-</div>
+  </div>
+</a>
 
 <style>
+  .anime-card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    height: 100%;
+  }
+
   .anime-card {
     background: white;
     border-radius: 12px;

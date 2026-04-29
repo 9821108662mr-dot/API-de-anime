@@ -19,11 +19,17 @@ interface JikanResponse {
 
 let animes: Anime[] = [];
 let error: string | null = null;
+const query = Astro.url.searchParams.get('q'); // Obtener el parámetro 'q' de la URL
 
 try {
-  // En Astro, este bloque se ejecuta durante el build (SSG) o en el servidor (SSR)
-  // Haciendo la carga de la página instantánea para el cliente.
-  const res = await fetch('https://api.jikan.moe/v4/top/anime');
+  let apiUrl = 'https://api.jikan.moe/v4/top/anime';
+  
+  // Si hay una búsqueda, cambiamos la URL de la API
+  if (query) {
+    apiUrl = `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query)}&limit=24`;
+  }
+
+  const res = await fetch(apiUrl);
   if (!res.ok) {
     throw new Error('Fallo al obtener los animes');
   }
@@ -38,7 +44,7 @@ try {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Top Animes - Jikan API con Astro</title>
+  <title>{query ? `Búsqueda: ${query}` : 'Top Animes'} - Jikan API</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     
@@ -55,15 +61,75 @@ try {
     }
     h1 {
       text-align: center;
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
       font-size: 2.5rem;
       color: #333;
     }
+    /* Estilos de la barra de búsqueda */
+    .search-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 3rem;
+    }
+    .search-form {
+      display: flex;
+      gap: 0.5rem;
+      width: 100%;
+      max-width: 600px;
+    }
+    .search-input {
+      flex-grow: 1;
+      padding: 0.8rem 1.2rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.3s ease;
+    }
+    .search-input:focus {
+      border-color: #3498db;
+    }
+    .search-btn {
+      padding: 0.8rem 1.5rem;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .search-btn:hover {
+      background-color: #2980b9;
+    }
+    .clear-btn {
+      padding: 0.8rem 1.5rem;
+      background-color: #e74c3c;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      transition: background-color 0.3s ease;
+    }
+    .clear-btn:hover {
+      background-color: #c0392b;
+    }
+
     .error-state {
       text-align: center;
       padding: 2rem;
       font-size: 1.2rem;
       color: red;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      font-size: 1.2rem;
+      color: #666;
     }
     .anime-grid {
       display: grid;
@@ -74,16 +140,36 @@ try {
 </head>
 <body>
   <div class="anime-container">
-    <h1>Top Animes de MyAnimeList</h1>
+    <h1>{query ? `Resultados para "${query}"` : 'Top Animes de MyAnimeList'}</h1>
     
+    <div class="search-container">
+      <form class="search-form" action="/" method="GET">
+        <input 
+          type="text" 
+          name="q" 
+          class="search-input" 
+          placeholder="Buscar un anime (ej. Naruto, Attack on Titan)..." 
+          value={query || ''} 
+          required 
+        />
+        <button type="submit" class="search-btn">Buscar</button>
+        {query && <a href="/" class="clear-btn">Limpiar</a>}
+      </form>
+    </div>
+
     {error ? (
       <div class="error-state">
-        <p>No se pudieron cargar los animes: {error}</p>
+        <p>Hubo un problema: {error}</p>
+      </div>
+    ) : animes.length === 0 ? (
+      <div class="empty-state">
+        <p>No se encontraron resultados para "{query}". Intenta con otra palabra.</p>
       </div>
     ) : (
       <div class="anime-grid">
         {animes.map(anime => (
           <AnimeCard 
+            id={anime.mal_id}
             title={anime.title}
             imageUrl={anime.images.jpg.image_url}
             score={anime.score}
