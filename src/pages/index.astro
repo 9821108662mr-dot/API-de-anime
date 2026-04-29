@@ -1,11 +1,97 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+import AnimeCard from '../components/AnimeCard.astro';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+interface Anime {
+  mal_id: number;
+  title: string;
+  images: {
+    jpg: {
+      image_url: string;
+    };
+  };
+  score: number;
+  synopsis: string;
+}
+
+interface JikanResponse {
+  data: Anime[];
+}
+
+let animes: Anime[] = [];
+let error: string | null = null;
+
+try {
+  // En Astro, este bloque se ejecuta durante el build (SSG) o en el servidor (SSR)
+  // Haciendo la carga de la página instantánea para el cliente.
+  const res = await fetch('https://api.jikan.moe/v4/top/anime');
+  if (!res.ok) {
+    throw new Error('Fallo al obtener los animes');
+  }
+  const data: JikanResponse = await res.json();
+  animes = data.data;
+} catch (e: any) {
+  error = e.message;
+}
 ---
 
-<Layout>
-	<Welcome />
-</Layout>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Top Animes - Jikan API con Astro</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background-color: #f8f9fa;
+      margin: 0;
+      padding: 0;
+    }
+    .anime-container {
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 2rem;
+      font-size: 2.5rem;
+      color: #333;
+    }
+    .error-state {
+      text-align: center;
+      padding: 2rem;
+      font-size: 1.2rem;
+      color: red;
+    }
+    .anime-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="anime-container">
+    <h1>Top Animes de MyAnimeList</h1>
+    
+    {error ? (
+      <div class="error-state">
+        <p>No se pudieron cargar los animes: {error}</p>
+      </div>
+    ) : (
+      <div class="anime-grid">
+        {animes.map(anime => (
+          <AnimeCard 
+            title={anime.title}
+            imageUrl={anime.images.jpg.image_url}
+            score={anime.score}
+            synopsis={anime.synopsis}
+          />
+        ))}
+      </div>
+    )}
+  </div>
+</body>
+</html>
