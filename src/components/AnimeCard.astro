@@ -29,7 +29,7 @@ const { id, title, imageUrl, score, synopsis } = Astro.props;
   }
 
   .anime-card {
-    background: white;
+    background: var(--card-bg);
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
@@ -60,7 +60,7 @@ const { id, title, imageUrl, score, synopsis } = Astro.props;
   .anime-info h3 {
     margin: 0 0 0.5rem 0;
     font-size: 1.2rem;
-    color: #2c3e50;
+    color: var(--text-color);
   }
 
   .score {
@@ -71,7 +71,7 @@ const { id, title, imageUrl, score, synopsis } = Astro.props;
 
   .synopsis {
     font-size: 0.9rem;
-    color: #666;
+    color: var(--secondary-text);
     line-height: 1.4;
     margin: 0;
   }

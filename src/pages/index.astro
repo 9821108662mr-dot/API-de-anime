@@ -1,4 +1,5 @@
 ---
+import Layout from '../layouts/Layout.astro';
 import AnimeCard from '../components/AnimeCard.astro';
 
 interface Anime {
@@ -15,18 +16,25 @@ interface Anime {
 
 interface JikanResponse {
   data: Anime[];
+  pagination: {
+    has_next_page: boolean;
+    current_page: number;
+  };
 }
 
 let animes: Anime[] = [];
 let error: string | null = null;
-const query = Astro.url.searchParams.get('q'); // Obtener el parámetro 'q' de la URL
+let paginationData = { has_next_page: false, current_page: 1 };
+
+const query = Astro.url.searchParams.get('q');
+const pageParam = Astro.url.searchParams.get('page');
+const currentPage = pageParam ? parseInt(pageParam) : 1;
 
 try {
-  let apiUrl = 'https://api.jikan.moe/v4/top/anime';
+  let apiUrl = `https://api.jikan.moe/v4/top/anime?page=${currentPage}&limit=24`;
   
-  // Si hay una búsqueda, cambiamos la URL de la API
   if (query) {
-    apiUrl = `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query)}&limit=24`;
+    apiUrl = `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query)}&page=${currentPage}&limit=24`;
   }
 
   const res = await fetch(apiUrl);
@@ -35,110 +43,16 @@ try {
   }
   const data: JikanResponse = await res.json();
   animes = data.data;
+  paginationData = data.pagination;
 } catch (e: any) {
   error = e.message;
 }
+
+const prevPageUrl = `/?${query ? `q=${query}&` : ''}page=${currentPage - 1}`;
+const nextPageUrl = `/?${query ? `q=${query}&` : ''}page=${currentPage + 1}`;
 ---
 
-<html lang="es">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{query ? `Búsqueda: ${query}` : 'Top Animes'} - Jikan API</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-    
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background-color: #f8f9fa;
-      margin: 0;
-      padding: 0;
-    }
-    .anime-container {
-      padding: 2rem;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 1.5rem;
-      font-size: 2.5rem;
-      color: #333;
-    }
-    /* Estilos de la barra de búsqueda */
-    .search-container {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 3rem;
-    }
-    .search-form {
-      display: flex;
-      gap: 0.5rem;
-      width: 100%;
-      max-width: 600px;
-    }
-    .search-input {
-      flex-grow: 1;
-      padding: 0.8rem 1.2rem;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 1rem;
-      outline: none;
-      transition: border-color 0.3s ease;
-    }
-    .search-input:focus {
-      border-color: #3498db;
-    }
-    .search-btn {
-      padding: 0.8rem 1.5rem;
-      background-color: #3498db;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-    .search-btn:hover {
-      background-color: #2980b9;
-    }
-    .clear-btn {
-      padding: 0.8rem 1.5rem;
-      background-color: #e74c3c;
-      color: white;
-      text-decoration: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      transition: background-color 0.3s ease;
-    }
-    .clear-btn:hover {
-      background-color: #c0392b;
-    }
-
-    .error-state {
-      text-align: center;
-      padding: 2rem;
-      font-size: 1.2rem;
-      color: red;
-    }
-    .empty-state {
-      text-align: center;
-      padding: 3rem;
-      font-size: 1.2rem;
-      color: #666;
-    }
-    .anime-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: 2rem;
-    }
-  </style>
-</head>
-<body>
+<Layout title={query ? `Búsqueda: ${query}` : 'Top Animes'}>
   <div class="anime-container">
     <h1>{query ? `Resultados para "${query}"` : 'Top Animes de MyAnimeList'}</h1>
     
@@ -166,18 +80,151 @@ try {
         <p>No se encontraron resultados para "{query}". Intenta con otra palabra.</p>
       </div>
     ) : (
-      <div class="anime-grid">
-        {animes.map(anime => (
-          <AnimeCard 
-            id={anime.mal_id}
-            title={anime.title}
-            imageUrl={anime.images.jpg.image_url}
-            score={anime.score}
-            synopsis={anime.synopsis}
-          />
-        ))}
-      </div>
+      <>
+        <div class="anime-grid">
+          {animes.map(anime => (
+            <AnimeCard 
+              id={anime.mal_id}
+              title={anime.title}
+              imageUrl={anime.images.jpg.image_url}
+              score={anime.score}
+              synopsis={anime.synopsis}
+            />
+          ))}
+        </div>
+        
+        <div class="pagination">
+          {currentPage > 1 ? (
+            <a href={prevPageUrl} class="page-btn">← Anterior</a>
+          ) : (
+            <span class="page-btn disabled">← Anterior</span>
+          )}
+          
+          <span class="page-info">Página {currentPage}</span>
+          
+          {paginationData.has_next_page ? (
+            <a href={nextPageUrl} class="page-btn">Siguiente →</a>
+          ) : (
+            <span class="page-btn disabled">Siguiente →</span>
+          )}
+        </div>
+      </>
     )}
   </div>
-</body>
-</html>
+</Layout>
+
+<style>
+  .anime-container {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  h1 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-size: 2.5rem;
+    color: var(--text-color);
+  }
+  .search-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 3rem;
+  }
+  .search-form {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 600px;
+  }
+  .search-input {
+    flex-grow: 1;
+    padding: 0.8rem 1.2rem;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.3s ease;
+  }
+  .search-input:focus {
+    border-color: var(--btn-bg);
+  }
+  .search-btn {
+    padding: 0.8rem 1.5rem;
+    background-color: var(--btn-bg);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  .search-btn:hover {
+    background-color: var(--btn-hover);
+  }
+  .clear-btn {
+    padding: 0.8rem 1.5rem;
+    background-color: #e74c3c;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.3s ease;
+  }
+  .clear-btn:hover {
+    background-color: #c0392b;
+  }
+
+  .error-state {
+    text-align: center;
+    padding: 2rem;
+    font-size: 1.2rem;
+    color: #e74c3c;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    font-size: 1.2rem;
+    color: var(--secondary-text);
+  }
+  .anime-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+  }
+
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .page-btn {
+    padding: 0.8rem 1.5rem;
+    background-color: var(--btn-bg);
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: background-color 0.3s ease;
+  }
+  .page-btn:hover {
+    background-color: var(--btn-hover);
+  }
+  .page-btn.disabled {
+    background-color: var(--border-color);
+    color: var(--secondary-text);
+    cursor: not-allowed;
+  }
+  .page-info {
+    font-weight: bold;
+    color: var(--text-color);
+  }
+</style>
